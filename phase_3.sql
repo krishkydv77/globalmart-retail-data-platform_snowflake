@@ -49,37 +49,40 @@ desc pipe global_mart_db.integrations.pipe_pos_raw;
 select * from global_mart_db.raw.pos_raw;
 
 -- PARQUET
-create or replace pip global_mart_db.integrations.pipe_erp_order_raw
-auto_ingest=true
-as
+-- create or replace pipe global_mart_db.integrations.pipe_erp_order_raw
+-- auto_ingest=true
+-- as
 copy into global_mart_db.raw.erp_order_raw
 from 
 (
 select
         $1:order_id::STRING,
-        $1:order_date::DATETIME,
+        $1:order_date::TIMESTAMP,
         $1:store_id::STRING,
-        $1:supplier_id::STRING,  
         $1:store_city::STRING,
+        $1:supplier_id::STRING,
         $1:supplier_name::STRING,
         $1:supplier_city::STRING,
         $1:product_sku::STRING,
         $1:category::STRING,
-        $1:unit_cost::FLOAT,
         $1:quantity_ordered::INT,
         $1:quantity_received::INT,
+        $1:unit_cost::FLOAT,
+        $1:total_cost::FLOAT,
         $1:order_status::STRING,
         $1:expected_delivery::DATE,
         $1:actual_delivery::DATE,
         $1:warehouse_id::STRING,
         $1:lead_time_days::INT,
-        $1:is_late::STRING,
+        $1:is_late::BOOLEAN,
         CURRENT_TIMESTAMP(),
         METADATA$FILENAME
     from @global_mart_db.integrations.stage_erp/erp
 )  file_format=global_mart_db.integrations.ff_parquet;
 
-
+desc pipe global_mart_db.integrations.pipe_erp_order_raw;
+truncate table global_mart_db.raw.erp_order_raw;
+select * from global_mart_db.raw.erp_order_raw;
 
 -- ======================bronze layer======================
  -- 3 = stream(append only/normal stream) 

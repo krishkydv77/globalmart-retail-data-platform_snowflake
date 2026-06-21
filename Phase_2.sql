@@ -35,7 +35,7 @@ CREATE OR REPLACE TABLE global_mart_db.raw.pos_raw (
     file_name STRING
 );
 
-
+truncate table global_mart_db.raw.pos_raw;
 COPY INTO global_mart_db.raw.pos_raw
 FROM
 (
@@ -60,7 +60,7 @@ CREATE OR REPLACE TABLE global_mart_db.raw.iot_events_raw (
     source_file STRING,
     loaded_at TIMESTAMP
 );
-
+truncate table global_mart_db.raw.iot_events_raw;
 COPY INTO global_mart_db.raw.iot_events_raw
 FROM
 (
@@ -80,54 +80,54 @@ FROM
 select * from global_mart_db.raw.iot_events_raw;
 
 -- Parquet
-drop table global_mart_db.raw.erp_orders;
-create or replace table global_mart_db.raw.erp_orders(col_all variant);
-select * from global_mart_db.raw.erp_orders;
+
 
 create or replace table global_mart_db.raw.erp_order_raw(
- order_id string,
-    order_date datetime,
-    store_id string,
-    supplier_id string,
-    store_city string,
-    supplier_name string,
-    supplier_city string,
-    product_sku string,
-    category string,
-    unit_cost float,
-    quantity_ordered int,
-    quantity_received int,
-    order_status string,
+order_id      STRING,
+    order_date    TIMESTAMP,
+    store_id          STRING,
+    store_city          STRING,
+    supplier_id        STRING,
+    supplier_name          STRING,
+    supplier_city         STRING,
+    product_sku         STRING,
+    category            STRING,
+    quantity_ordered    int,
+    quantity_received   int,
+    unit_cost          float,
+    total_cost        float,
+    order_status      STRING,
     expected_delivery date,
-    actual_delivery date,
-    warehouse_id string,
-    lead_time_days int,
-    is_late string,
-    file_load_time timestamp,
-    source_file string
+    actual_delivery   date,
+    warehouse_id      string,
+    lead_time_days    int,
+    is_late           Boolean,
+    load_time TIMESTAMP,
+    source_file STRING
 );
 
 copy into global_mart_db.raw.erp_order_raw from 
 (
 select
-        $1:order_id::STRING,
-        $1:order_date::DATETIME,
+       $1:order_id::STRING,
+        $1:order_date::TIMESTAMP,
         $1:store_id::STRING,
-        $1:supplier_id::STRING,  
         $1:store_city::STRING,
+        $1:supplier_id::STRING,
         $1:supplier_name::STRING,
         $1:supplier_city::STRING,
         $1:product_sku::STRING,
         $1:category::STRING,
-        $1:unit_cost::FLOAT,
         $1:quantity_ordered::INT,
         $1:quantity_received::INT,
+        $1:unit_cost::FLOAT,
+        $1:total_cost::FLOAT,
         $1:order_status::STRING,
         $1:expected_delivery::DATE,
         $1:actual_delivery::DATE,
         $1:warehouse_id::STRING,
         $1:lead_time_days::INT,
-        $1:is_late::STRING,
+        $1:is_late::BOOLEAN,
         CURRENT_TIMESTAMP(),
         METADATA$FILENAME
     from @global_mart_db.integrations.stage_erp/erp
@@ -160,6 +160,8 @@ SELECT
         CURRENT_TIMESTAMP()  as processed_ts
     FROM global_mart_db.raw.iot_events_raw,
          LATERAL FLATTEN(input => raw_payload:readings) f;
+
+         select * from global_mart_db.raw.iot_events_raw;
 
 
 create or replace view global_mart_db.raw.sensor_iot as

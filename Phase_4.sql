@@ -2,6 +2,7 @@
          -- ===============tables for silver layer==================
 
 -- json
+truncate table global_mart_db.staging.stg_json_sensor;
 CREATE OR REPLACE TABLE global_mart_db.staging.stg_json_sensor (
     event_id STRING,
     event_type STRING,
@@ -20,6 +21,10 @@ CREATE OR REPLACE TABLE global_mart_db.staging.stg_json_sensor (
     processed_ts timestamp
 );
 -- csv
+
+select count(transaction_id) from global_mart_db.staging.stg_csv_transaction ;
+select count(distinct transaction_id) from global_mart_db.staging.stg_csv_transaction ;
+truncate table global_mart_db.staging.stg_csv_transaction;
 CREATE OR REPLACE TABLE global_mart_db.staging.stg_csv_transaction (
     transaction_id      STRING,
     store_id            STRING,
@@ -50,21 +55,21 @@ CREATE OR REPLACE TABLE global_mart_db.staging.stg_csv_transaction (
 
 -- parquet
 CREATE OR REPLACE TABLE global_mart_db.staging.stg_erp_parquet(
-    order_id      STRING,
-    order_date    TIMESTAMP,
+    order_id           STRING,
+    order_date        TIMESTAMP,
     store_id          STRING,
-    store_city          STRING,
+    store_city         STRING,
     supplier_id        STRING,
-    supplier_name          STRING,
-    supplier_city         STRING,
-    product_sku         STRING,
-    category            STRING,
-    quantity_ordered    int,
-    quantity_received   int,
+    supplier_name      STRING,
+    supplier_city      STRING,
+    product_sku        STRING,
+    category           STRING,
+    quantity_ordered   int,
+    quantity_received  int,
     unit_cost          float,
-    total_cost        float,
-    order_status      STRING,
-    expected_delivery date,
+    total_cost         float,
+    order_status       STRING,
+    expected_delivery  date,
     actual_delivery   date,
     warehouse_id      string,
     lead_time_days    int,
@@ -191,10 +196,10 @@ CREATE OR REPLACE TASK global_mart_db.raw.process_parquet
 WAREHOUSE = compute_wh
 WHEN SYSTEM$STREAM_HAS_DATA('global_mart_db.raw.stream_erp_order_raw')
 AS
-MERGE INTO global_mart_db.raw.stream_erp_order_raw AS stg
+MERGE INTO global_mart_db.staging.stg_erp_parquet AS stg
 using (
   SELECT
-        order_id,
+         order_id,
         order_date,
         store_id,
         store_city,
@@ -216,22 +221,25 @@ using (
         load_time,
         source_file,
         CURRENT_TIMESTAMP() AS processed_time
-        FROM global_mart_db.raw.stream_parq_raw ) src 
+        FROM global_mart_db.raw.stream_erp_order_raw ) src 
         ON stg.order_id = src.order_id
         WHEN NOT MATCHED THEN
         INSERT ( order_id,
         order_date, store_id, store_city, supplier_id, supplier_name, supplier_city,
-        product_sku, category, quantity_ordered, quantity_received, unit_cost, total_cost, order_status, expected_delivery,
-        actual_delivery, warehouse_id, lead_time_days, is_late, load_time, source_file, processed_time )
+        product_sku, category, quantity_ordered, quantity_received, unit_cost, total_cost, order_status,
+        expected_delivery,actual_delivery, warehouse_id, lead_time_days, is_late, load_time, source_file,
+        processed_time )
         values (
         src.order_id,
         src.order_date, src.store_id, src.store_city, src.supplier_id, src.supplier_name, src.supplier_city,
-        src.product_sku, src.category, src.quantity_ordered, src.quantity_received, src.unit_cost, src.total_cost,   src.order_status,src.expected_delivery,
+        src.product_sku, src.category, src.quantity_ordered, src.quantity_received, src.unit_cost,
+        src.total_cost,src.order_status,src.expected_delivery,
         src.actual_delivery, src.warehouse_id, src.lead_time_days, src.is_late, src.load_time, src.source_file, src.processed_time );
 ALTER TASK global_mart_db.raw.process_parquet resume; 
 select * from global_mart_db.raw.erp_order_raw;
 select * from global_mart_db.raw.stream_erp_order_raw;
 select * from global_mart_db.staging.stg_erp_parquet ;
 describe TASK global_mart_db.raw.process_parquet;
-
+ 
+show tasks ;
 ALTER TASK global_mart_db.raw.process_parquet suspend;
